@@ -177,7 +177,8 @@ MODULE_SPLIT_SOURCES =						\
 	src/feature/split/dirichlet/mt.c		 \
 	src/feature/split/dirichlet/mydirichlet.c	\
 	src/feature/split/dirichlet/gsl_rng.c	\
-	src/feature/split/dirichlet/gausszig.c 
+	src/feature/split/dirichlet/gausszig.c 	\
+	src/feature/split/demo.c
 
 if BUILD_MODULE_SPLIT
 LIBTOR_APP_A_SOURCES += $(MODULE_SPLIT_SOURCES)
@@ -405,6 +406,7 @@ noinst_HEADERS +=					\
 	src/feature/split/dirichlet/gsl_rng.h               \
 	src/feature/split/dirichlet/gsl_types.h               \
 	src/feature/split/dirichlet/mydirichlet.h               \
+	src/feature/split/demo.h				\
 	src/feature/stats/geoip_stats.h			\
 	src/feature/stats/rephist.h			\
 	src/feature/stats/predict_ports.h
