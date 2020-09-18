@@ -5,4 +5,5 @@
  **/
 
 #include "feature/split/demo.h"
+#include <gpiod.h>
 

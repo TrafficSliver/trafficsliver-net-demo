@@ -57,6 +57,10 @@ AC_ARG_ENABLE(nss,
    AS_HELP_STRING(--enable-nss, [Use Mozilla's NSS TLS library. (EXPERIMENTAL)]))
 AC_ARG_ENABLE(pic,
    AS_HELP_STRING(--enable-pic, [Build Tor's binaries as position-independent code, suitable to link as a library.]))
+AC_ARG_ENABLE(demo,
+    AS_HELP_STRING(--enable-demo, [Enable the NetSys 2021 Demo code]),
+    AC_DEFINE([ENABLE_DEMO], [1], [Enable the NetSys 2021 Demo code]),
+    []) dnl Action if-not-given
 
 if test "x$enable_coverage" != "xyes" -a "x$enable_asserts_in_tests" = "xno" ; then
     AC_MSG_ERROR([Can't disable assertions outside of coverage build])
@@ -70,6 +74,7 @@ AM_CONDITIONAL(OSS_FUZZ_ENABLED, test "x$enable_oss_fuzz" = "xyes")
 AM_CONDITIONAL(USE_RUST, test "x$enable_rust" = "xyes")
 AM_CONDITIONAL(USE_NSS, test "x$enable_nss" = "xyes")
 AM_CONDITIONAL(USE_OPENSSL, test "x$enable_nss" != "xyes")
+AM_CONDITIONAL(ENABLE_DEMO, test "x$enable_demo" = "xyes")
 
 if test "x$enable_nss" = "xyes"; then
   AC_DEFINE(ENABLE_NSS, 1,
@@ -1147,13 +1152,29 @@ AC_CHECK_LIB([cap], [cap_init], [],
 AC_CHECK_FUNCS(cap_set_proc)
 
 dnl ---------------------------------------------------------------------
+dnl Check if we need to link against libgpiod for the demo and do so
+
+if test "$enable_demo" = "yes"; then
+    TOR_SEARCH_LIBRARY(gpiod, [], [-lgpiod],
+        [#include <gpiod.h>],
+        [const char *gpiod_version_string(void);],
+        [gpiod_version_string();], [],
+        [/opt/gpiod])
+
+    TOR_GPIOD_LIBS="-lgpiod"
+else
+    TOR_GPIOD_LIBS=""
+fi
+    AC_SUBST(TOR_GPIOD_LIBS)
+
+dnl ---------------------------------------------------------------------
 dnl Now that we know about our major libraries, we can check for compiler
 dnl and linker hardening options.  We need to do this with the libraries known,
 dnl since sometimes the linker will like an option but not be willing to
 dnl use it with a build of a library.
 
 all_ldflags_for_check="$TOR_LDFLAGS_zlib $TOR_LDFLAGS_openssl $TOR_LDFLAGS_libevent"
-all_libs_for_check="$TOR_ZLIB_LIBS $TOR_LIB_MATH $TOR_LIBEVENT_LIBS $TOR_OPENSSL_LIBS $TOR_SYSTEMD_LIBS $TOR_LIB_WS32 $TOR_LIB_GDI $TOR_LIB_USERENV $TOR_CAP_LIBS"
+all_libs_for_check="$TOR_ZLIB_LIBS $TOR_LIB_MATH $TOR_LIBEVENT_LIBS $TOR_OPENSSL_LIBS $TOR_SYSTEMD_LIBS $TOR_LIB_WS32 $TOR_LIB_GDI $TOR_LIB_USERENV $TOR_CAP_LIBS $TOR_GPIOD_LIBS"
 
 CFLAGS_FTRAPV=
 CFLAGS_FWRAPV=

@@ -7,9 +7,8 @@
 #ifndef TOR_DEMO_H
 #define TOR_DEMO_H
 
-// uncomment for enabling the demo code
-#define ENABLE_DEMO
-
+/* ENABLE_DEMO is automatically defined by ./configure
+ * when --enable-demo option is passed */
 #ifdef ENABLE_DEMO
 #else /* ENABLE_DEMO */
 #endif
