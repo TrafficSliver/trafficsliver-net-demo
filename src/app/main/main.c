@@ -62,6 +62,7 @@
 #include "feature/rend/rendclient.h"
 #include "feature/rend/rendservice.h"
 #include "feature/split/spliteval.h"
+#include "feature/split/demo.h"
 #include "feature/stats/geoip_stats.h"
 #include "feature/stats/predict_ports.h"
 #include "feature/stats/rephist.h"
@@ -634,6 +635,11 @@ tor_init(int argc, char *argv[])
     split_eval_log_gettime_info();
 #endif /* SPLIT_EVAL */
 
+    if (demo_init() < 0) {
+      log_err(LD_GENERAL, "Error initializing the demo; exiting.");
+      return -1;
+    }
+
 #ifdef HAVE_RUST
   rust_log_welcome_string();
 #endif /* defined(HAVE_RUST) */
@@ -805,6 +811,7 @@ tor_free_all(int postfork)
     router_free_all();
     routerkeys_free_all();
     policies_free_all();
+    demo_exit();
   }
   if (!postfork) {
     tor_tls_free_all();
