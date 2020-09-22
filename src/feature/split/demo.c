@@ -9,7 +9,9 @@
 #include <gpiod.h>
 #include <errno.h>
 #include <string.h>
+#include <stdbool.h>
 
+#include "app/config/config.h"
 #include "lib/evloop/timers.h"
 #include "lib/log/log.h"
 #include "lib/log/util_bug.h"
@@ -33,6 +35,7 @@ struct demo_led_control {
 };
 
 /**** Global Variables ****/
+bool demo_initialized = false;
 struct gpiod_chip *chip = NULL;
 struct demo_led_control fwd_leds = {0};
 struct demo_led_control bwd_leds = {0};
@@ -61,6 +64,13 @@ static void led_timer_cb(tor_timer_t *timer, void *args, const struct monotime_t
 
 int demo_init(void)
 {
+  const or_options_t* options = get_options();
+
+  if (options->DisableDemo) {
+    log_warn(LD_GENERAL, "Demo code has been disabled via the 'DisableDemo' option");
+    return 0;
+  }
+
   log_notice(LD_GENERAL, "Initializing demo code...");
 
   // get GPIO chip handle
@@ -102,6 +112,7 @@ int demo_init(void)
     bwd_leds.timers[i] = timer_new(led_timer_cb, gpiod_line_bulk_get_line(&bwd_leds.lines, i));
   }
 
+  demo_initialized = true;
   log_notice(LD_GENERAL, "Initializing demo code... Success!");
   return 0;
 }
@@ -127,6 +138,9 @@ void demo_register_cell(subcirc_id_t subcirc, cell_direction_t direction)
 {
   struct demo_led_control *leds;
   struct gpiod_line *line;
+
+  if (!demo_initialized)
+    return;
 
   if (subcirc >= DEMO_NUM_SUBCIRCS)
     return;

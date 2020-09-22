@@ -734,6 +734,7 @@ static config_var_t option_vars_[] = {
   VAR("___UsingTestNetworkDefaults", BOOL, UsingTestNetworkDefaults_, "0"),
   V(SplitSubcircuits, UINT, "3"),
   V(SplitStrategy, STRING, "ROUND_ROBIN"),
+  V(DisableDemo, BOOL, "0"),
   END_OF_CONFIG_VARS
 };
 
@@ -4779,6 +4780,7 @@ options_transition_allowed(const or_options_t *old,
   NO_CHANGE_BOOL(NoExec);
   NO_CHANGE_INT(OwningControllerFD);
   NO_CHANGE_BOOL(DisableSignalHandlers);
+  NO_CHANGE_BOOL(DisableDemo);
 
   if (sandbox_is_active()) {
 #define SB_NOCHANGE_STR(opt)                      \

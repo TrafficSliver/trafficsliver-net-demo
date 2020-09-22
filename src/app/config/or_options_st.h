@@ -1094,6 +1094,8 @@ struct or_options_t {
   /** Split module: Default splitting strategy */
   char *SplitStrategy;
 
+  /** Split demo: if true, the user wants to disable the demo */
+  int DisableDemo;
 };
 
 #endif
