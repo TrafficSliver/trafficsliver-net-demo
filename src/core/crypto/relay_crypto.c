@@ -12,6 +12,7 @@
 #include "core/crypto/hs_ntor.h" // for HS_NTOR_KEY_EXPANSION_KDF_OUT_LEN
 #include "core/or/relay.h"
 #include "core/crypto/relay_crypto.h"
+#include "feature/split/demo.h"
 #include "feature/split/splitcommon.h"
 
 #include "core/or/cell_st.h"
@@ -188,6 +189,8 @@ relay_decrypt_cell(circuit_t **circ, cell_t *cell,
           }
 
           circuit_t* split_expected_circ = next_subcirc->circ;
+
+          demo_register_cell(next_subcirc->id, CELL_DIRECTION_IN);
 
           if (*circ != split_expected_circ) {
             /* not expected, need to buffer */

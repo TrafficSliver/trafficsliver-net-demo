@@ -82,6 +82,7 @@
 #include "core/or/scheduler.h"
 #include "feature/stats/rephist.h"
 #include "feature/split/cell_buffer.h"
+#include "feature/split/demo.h"
 #include "feature/split/splitcommon.h"
 #include "feature/split/spliteval.h"
 #include "feature/split/splitor.h"
@@ -268,6 +269,8 @@ circuit_receive_relay_cell_impl(cell_t *cell, circuit_t *circ,
       split_actual_circ = next_subcirc->circ;
       tor_assert(split_actual_circ);
 
+      demo_register_cell(next_subcirc->id, CELL_DIRECTION_IN);
+
       log_debug(LD_CIRC, "Splitting relay backward cell: original circ was %p "
                 "(ID %u) new circ is %p (ID %u)",
                 TO_OR_CIRCUIT(circ), TO_OR_CIRCUIT(circ)->p_circ_id,
@@ -284,6 +287,8 @@ circuit_receive_relay_cell_impl(cell_t *cell, circuit_t *circ,
       tor_assert(TO_OR_CIRCUIT(split_actual_circ)->p_chan);
       circ = split_actual_circ;
       split_used_circuit(base, CELL_DIRECTION_IN);
+    } else {
+      demo_register_cell(0, CELL_DIRECTION_IN);
     }
   }
 
@@ -319,6 +324,7 @@ circuit_receive_relay_cell_impl(cell_t *cell, circuit_t *circ,
     conn = relay_lookup_conn(circ, cell, cell_direction, layer_hint);
     if (cell_direction == CELL_DIRECTION_OUT) {
       ++stats_n_relay_cells_delivered;
+      demo_register_cell(0, CELL_DIRECTION_OUT);
       log_debug(LD_OR,"Sending away from origin.");
       if ((reason=connection_edge_process_relay_cell(cell, circ, conn, NULL))
           < 0) {
@@ -363,6 +369,8 @@ circuit_receive_relay_cell_impl(cell_t *cell, circuit_t *circ,
       chan = base->n_chan;
       tor_assert(chan);
 
+      demo_register_cell(TO_OR_CIRCUIT(circ)->subcirc->id, CELL_DIRECTION_OUT);
+
       if (circ != split_expected_circ) {
         /* need to buffer */
         log_debug(LD_CIRC, "Buffer relay forward cell received on wrong split "
@@ -392,6 +400,8 @@ circuit_receive_relay_cell_impl(cell_t *cell, circuit_t *circ,
 
       circ = base;
       split_used_circuit(base, CELL_DIRECTION_OUT);
+    } else {
+      demo_register_cell(0, CELL_DIRECTION_OUT);
     }
 
     cell->circ_id = circ->n_circ_id; /* switch it */
@@ -723,6 +733,8 @@ relay_send_command_from_edge_,(streamid_t stream_id, circuit_t *circ,
 
       split_actual_circ = next_subcirc->circ;
 
+      demo_register_cell(next_subcirc->id, CELL_DIRECTION_OUT);
+
       log_debug(LD_CIRC, "Splitting relay forward cell: original circ was %p "
                 "(ID %u) new circ is %p (ID %u)",
                 TO_ORIGIN_CIRCUIT(circ), circ->n_circ_id,
@@ -749,6 +761,7 @@ relay_send_command_from_edge_,(streamid_t stream_id, circuit_t *circ,
     split_actual_circ = circ;
     cell.circ_id = TO_OR_CIRCUIT(split_actual_circ)->p_circ_id;
     cell_direction = CELL_DIRECTION_IN;
+    demo_register_cell(0, CELL_DIRECTION_IN);
   }
 
   memset(&rh, 0, sizeof(rh));
