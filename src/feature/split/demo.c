@@ -35,12 +35,12 @@ struct demo_led_control {
 };
 
 /**** Global Variables ****/
-bool demo_initialized = false;
-struct gpiod_chip *chip = NULL;
-struct demo_led_control fwd_leds = {0};
-struct demo_led_control bwd_leds = {0};
+static bool demo_initialized = false;
+static struct gpiod_chip *chip = NULL;
+static struct demo_led_control fwd_leds = {0};
+static struct demo_led_control bwd_leds = {0};
 
-const struct timeval blink_duration = {
+static const struct timeval blink_duration = {
     .tv_sec = 0,
     .tv_usec = DEMO_BLINK_DURATION,
 };
