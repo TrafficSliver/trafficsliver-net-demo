@@ -635,11 +635,6 @@ tor_init(int argc, char *argv[])
     split_eval_log_gettime_info();
 #endif /* SPLIT_EVAL */
 
-    if (demo_init() < 0) {
-      log_err(LD_GENERAL, "Error initializing the demo; exiting.");
-      return -1;
-    }
-
 #ifdef HAVE_RUST
   rust_log_welcome_string();
 #endif /* defined(HAVE_RUST) */
@@ -662,6 +657,11 @@ tor_init(int argc, char *argv[])
 
   /* The options are now initialised */
   const or_options_t *options = get_options();
+
+  if (demo_init() < 0) {
+    log_err(LD_GENERAL, "Error initializing the demo; exiting.");
+    return -1;
+  }
 
   /* Initialize channelpadding parameters to defaults until we get
    * a consensus */
