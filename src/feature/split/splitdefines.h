@@ -28,6 +28,10 @@
  * connection */
 #define SPLIT_SOCKS_LAUNCH_NEW_CIRCUIT
 
+/* uncomment for allowing Tor clients to use direct directory fetches instead of
+ * only Tor-tunneled ones */
+#define SPLIT_ALLOW_DIRECT_FETCH
+
 /* null-terminated string of the default interface to use for new
  * split circuits (provide an empty string "" to allow the use of
  * arbitrary interfaces) */

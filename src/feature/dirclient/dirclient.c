@@ -44,6 +44,7 @@
 #include "feature/rend/rendcommon.h"
 #include "feature/rend/rendservice.h"
 #include "feature/stats/predict_ports.h"
+#include "feature/split/splitdefines.h"
 
 #include "lib/compress/compress.h"
 #include "lib/crypt_ops/crypto_format.h"
@@ -307,9 +308,12 @@ directory_post_to_dirservers(uint8_t dir_purpose, uint8_t router_purpose,
 STATIC int
 should_use_directory_guards(const or_options_t *options)
 {
+#ifndef SPLIT_ALLOW_DIRECT_FETCH
   /* Public (non-bridge) servers never use directory guards. */
   if (public_server_mode(options))
+#endif /* SPLIT_ALLOW_DIRECT_FETCH */
     return 0;
+
   /* If guards are disabled, we can't use directory guards.
    */
   if (!options->UseEntryGuards)
@@ -873,7 +877,12 @@ directory_must_use_begindir(const or_options_t *options)
 {
   /* Clients, onion services, and bridges must use begindir,
    * relays and authorities do not have to */
+#ifndef SPLIT_ALLOW_DIRECT_FETCH
   return !public_server_mode(options);
+#else /* SPLIT_ALLOW_DIRECT_FETCH */
+  (void)options;
+  return 0;
+#endif /* SPLIT_ALLOW_DIRECT_FETCH */
 }
 
 /** Evaluate the situation and decide if we should use an encrypted
@@ -901,6 +910,13 @@ directory_command_should_use_begindir(const or_options_t *options,
 
   tor_assert(reason);
   *reason = NULL;
+
+#ifdef SPLIT_ALLOW_DIRECT_FETCH
+  if (!public_server_mode(options)) {
+    *reason = "(client manually set to direct directory connection)";
+    return 0;
+  }
+#endif /* SPLIT_ALLOW_DIRECT_FETCH */
 
   /* Reasons why we must use begindir */
   if (!dir_port) {
