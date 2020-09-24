@@ -20,7 +20,7 @@
 #define DEMO_CONSUMER       "tor_demo"
 #define DEMO_GPIO_CHIPNAME  "gpiochip0"
 #define DEMO_NUM_SUBCIRCS   3
-#define DEMO_BLINK_DURATION 1000L //usec
+#define DEMO_BLINK_DURATION 100L //usec
 #define DEMO_LINE_LED0_FWD  14
 #define DEMO_LINE_LED0_BWD  4
 #define DEMO_LINE_LED1_FWD  18
