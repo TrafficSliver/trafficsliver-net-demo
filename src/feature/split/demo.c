@@ -24,6 +24,7 @@
 #define DEMO_GPIO_CHIPNAME  "gpiochip0"
 #define DEMO_NUM_SUBCIRCS   3
 #define DEMO_BLINK_DURATION 100L //usec
+#define DEMO_CELL_INTERVAL  100
 #define DEMO_LINE_LED0_FWD  14
 #define DEMO_LINE_LED0_BWD  4
 #define DEMO_LINE_LED1_FWD  18
@@ -138,7 +139,7 @@ int demo_init(void)
 
 #elif defined(ENABLE_DEMO_SERVER)
 
-  (void *)&led_timer_cb;
+  (void)&led_timer_cb;
 
 #elif defined(ENABLE_DEMO_TEST)
 
@@ -200,6 +201,15 @@ void demo_register_cell(subcirc_id_t subcirc, cell_direction_t direction, bool i
     default:
       tor_assert_unreached();
   }
+
+  // only handle every DEMO_CELL_INTERVAL-th cell per sub-circuit
+  if (leds->count[subcirc] != 0) {
+#if defined(ENABLE_DEMO_TEST)
+    log_warn(LD_GENERAL, "LED%u, %s (not handled)", subcirc, direction_str);
+#endif /* defined(ENABLE_DEMO_TEST) */
+    return;
+  }
+  leds->count[subcirc] = (leds->count[subcirc] + 1) % DEMO_CELL_INTERVAL;
 
 #if defined(ENABLE_DEMO_RPI)
 
