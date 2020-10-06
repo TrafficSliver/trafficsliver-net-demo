@@ -6,7 +6,6 @@
 
 #include "feature/split/demo.h"
 
-#include <gpiod.h>
 #include <errno.h>
 #include <string.h>
 #include <stdbool.h>
@@ -15,6 +14,10 @@
 #include "lib/evloop/timers.h"
 #include "lib/log/log.h"
 #include "lib/log/util_bug.h"
+
+#if defined(ENABLE_DEMO_RPI)
+#include <gpiod.h>
+#endif /* defined(ENABLE_DEMO_RPI) */
 
 /**** Defines ****/
 #define DEMO_CONSUMER       "tor_demo"
@@ -30,15 +33,25 @@
 
 /**** Private definitions ****/
 struct demo_led_control {
+#if defined(ENABLE_DEMO_RPI)
   struct gpiod_line_bulk lines;
+#endif /* defined(ENABLE_DEMO_RPI) */
+
+#if defined(ENABLE_DEMO_RPI) || defined(ENABLE_DEMO_TEST)
   tor_timer_t *timers[DEMO_NUM_SUBCIRCS];
+#endif /* defined(ENABLE_DEMO_...) */
+
+  unsigned int count[DEMO_NUM_SUBCIRCS];
 };
 
 /**** Global Variables ****/
 static bool demo_initialized = false;
-static struct gpiod_chip *chip = NULL;
 static struct demo_led_control fwd_leds = {0};
 static struct demo_led_control bwd_leds = {0};
+
+#if defined(ENABLE_DEMO_RPI)
+static struct gpiod_chip *chip = NULL;
+#endif /* defined(ENABLE_DEMO_RPI) */
 
 static const struct timeval blink_duration = {
     .tv_sec = 0,
@@ -50,16 +63,25 @@ static const struct timeval blink_duration = {
 
 static void led_timer_cb(tor_timer_t *timer, void *args, const struct monotime_t *t)
 {
-  struct gpiod_line *line;
   (void) timer; (void)t;
-
   tor_assert(args);
-  line = (struct gpiod_line *)args;
+
+#if defined(ENABLE_DEMO_RPI)
+
+  struct gpiod_line *line = (struct gpiod_line *)args;
 
   if (gpiod_line_set_value(line, 0) < 0) {
     log_err(LD_GENERAL, "Error setting GPIO %u to 0: %s",
             gpiod_line_offset(line), strerror(errno));
   }
+
+#elif defined(ENABLE_DEMO_TEST)
+
+  char *line = (char *)args;
+
+  log_warn(LD_GENERAL, "Timeout: %s off", line);
+
+#endif /* defined(ENABLE_DEMO_...) */
 }
 
 int demo_init(void)
@@ -72,6 +94,8 @@ int demo_init(void)
   }
 
   log_notice(LD_GENERAL, "Initializing demo code...");
+
+#if defined(ENABLE_DEMO_RPI)
 
   // get GPIO chip handle
   chip = gpiod_chip_open_by_name(DEMO_GPIO_CHIPNAME);
@@ -112,6 +136,21 @@ int demo_init(void)
     bwd_leds.timers[i] = timer_new(led_timer_cb, gpiod_line_bulk_get_line(&bwd_leds.lines, i));
   }
 
+#elif defined(ENABLE_DEMO_SERVER)
+
+  (void *)&led_timer_cb;
+
+#elif defined(ENABLE_DEMO_TEST)
+
+  fwd_leds.timers[0] = timer_new(led_timer_cb, "LED0, forward");
+  fwd_leds.timers[1] = timer_new(led_timer_cb, "LED1, forward");
+  fwd_leds.timers[2] = timer_new(led_timer_cb, "LED2, forward");
+  bwd_leds.timers[0] = timer_new(led_timer_cb, "LED0, backward");
+  bwd_leds.timers[1] = timer_new(led_timer_cb, "LED1, backward");
+  bwd_leds.timers[2] = timer_new(led_timer_cb, "LED2, backward");
+
+#endif /* defined(ENABLE_DEMO_...) */
+
   demo_initialized = true;
   log_notice(LD_GENERAL, "Initializing demo code... Success!");
   return 0;
@@ -119,12 +158,15 @@ int demo_init(void)
 
 void demo_exit(void)
 {
+#if defined(ENABLE_DEMO_RPI) || defined(ENABLE_DEMO_TEST)
   // free timers
   for (int i = 0; i < DEMO_NUM_SUBCIRCS; i++) {
     timer_free(fwd_leds.timers[i]);
     timer_free(bwd_leds.timers[i]);
   }
+#endif /* defined(ENABLE_DEMO_...) */
 
+#if defined(ENABLE_DEMO_RPI)
   // release reserved lines
   gpiod_line_release_bulk(&fwd_leds.lines);
   gpiod_line_release_bulk(&bwd_leds.lines);
@@ -132,12 +174,13 @@ void demo_exit(void)
   // close GPIO chip
   if (chip)
     gpiod_chip_close(chip);
+#endif /* defined(ENABLE_DEMO_RPI) */
 }
 
 void demo_register_cell(subcirc_id_t subcirc, cell_direction_t direction)
 {
   struct demo_led_control *leds;
-  struct gpiod_line *line;
+  char *direction_str;
 
   if (!demo_initialized)
     return;
@@ -148,15 +191,19 @@ void demo_register_cell(subcirc_id_t subcirc, cell_direction_t direction)
   switch (direction) {
     case CELL_DIRECTION_OUT:
       leds = &fwd_leds;
+      direction_str = "forward";
       break;
     case CELL_DIRECTION_IN:
       leds = &bwd_leds;
+      direction_str = "backward";
       break;
     default:
       tor_assert_unreached();
   }
 
-  line = gpiod_line_bulk_get_line(&leds->lines, subcirc);
+#if defined(ENABLE_DEMO_RPI)
+
+  struct gpiod_line *line = gpiod_line_bulk_get_line(&leds->lines, subcirc);
 
   // turn on LED
   if (gpiod_line_set_value(line, 1) < 0) {
@@ -164,7 +211,24 @@ void demo_register_cell(subcirc_id_t subcirc, cell_direction_t direction)
         gpiod_line_offset(line), strerror(errno));
   }
 
+#elif defined(ENABLE_DEMO_SERVER)
+
+  log_notice(LD_DEMO, "%s %s relay cell on sub-circuit %u",
+             direction == CELL_DIRECTION_OUT ? "Merge" : "Split",
+             direction_str, subcirc);
+
+#elif defined(ENABLE_DEMO_TEST)
+
+  log_warn(LD_GENERAL, "LED%u, %s", subcirc, direction_str);
+
+#endif /* defined(ENABLE_DEMO_...) */
+
+
+#if defined(ENABLE_DEMO_RPI) || defined(ENABLE_DEMO_TEST)
   // schedule timer for turning LED off again
   timer_schedule(leds->timers[subcirc], &blink_duration);
+#else
+  (void)blink_duration;
+#endif /* defined(ENABLE_DEMO_...) */
 }
 

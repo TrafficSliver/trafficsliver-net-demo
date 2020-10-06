@@ -58,9 +58,25 @@ AC_ARG_ENABLE(nss,
 AC_ARG_ENABLE(pic,
    AS_HELP_STRING(--enable-pic, [Build Tor's binaries as position-independent code, suitable to link as a library.]))
 AC_ARG_ENABLE(demo,
-    AS_HELP_STRING(--enable-demo, [Enable the NetSys 2021 Demo code]),
-    AC_DEFINE([ENABLE_DEMO], [1], [Enable the NetSys 2021 Demo code]),
-    []) dnl Action if-not-given
+    AS_HELP_STRING(--enable-demo, [Enable the NetSys 2021 Demo code (given ARG must be rpi/server/test)]),
+    [
+        case "${enableval}" in
+            rpi)    AC_DEFINE(ENABLE_DEMO_RPI, 1, [Demo on RPIs])
+                    need_gpiod=true
+                    ;;
+            server) AC_DEFINE(ENABLE_DEMO_SERVER, 1, [Demo on servers])
+                    need_gpiod=false
+                    ;;
+            test)   AC_DEFINE(ENABLE_DEMO_TEST, 1, [Testing demo])
+                    need_gpiod=false
+                    ;;
+            *)      AC_MSG_ERROR([bad value ${enableval} for --enable-demo, must be rpi/server/test])
+                    ;;
+        esac
+        AC_DEFINE(ENABLE_DEMO, 1, [Enable the NetSys 2021 Demo code])
+        demo=true
+    ],
+    [demo=false])
 
 if test "x$enable_coverage" != "xyes" -a "x$enable_asserts_in_tests" = "xno" ; then
     AC_MSG_ERROR([Can't disable assertions outside of coverage build])
@@ -74,7 +90,7 @@ AM_CONDITIONAL(OSS_FUZZ_ENABLED, test "x$enable_oss_fuzz" = "xyes")
 AM_CONDITIONAL(USE_RUST, test "x$enable_rust" = "xyes")
 AM_CONDITIONAL(USE_NSS, test "x$enable_nss" = "xyes")
 AM_CONDITIONAL(USE_OPENSSL, test "x$enable_nss" != "xyes")
-AM_CONDITIONAL(ENABLE_DEMO, test "x$enable_demo" = "xyes")
+AM_CONDITIONAL(ENABLE_DEMO, test "x$demo" = "xtrue")
 
 if test "x$enable_nss" = "xyes"; then
   AC_DEFINE(ENABLE_NSS, 1,
@@ -1154,7 +1170,7 @@ AC_CHECK_FUNCS(cap_set_proc)
 dnl ---------------------------------------------------------------------
 dnl Check if we need to link against libgpiod for the demo and do so
 
-if test "$enable_demo" = "yes"; then
+if test "x$need_gpiod" = "xtrue"; then
     TOR_SEARCH_LIBRARY(gpiod, [], [-lgpiod],
         [#include <gpiod.h>],
         [const char *gpiod_version_string(void);],
