@@ -190,7 +190,7 @@ relay_decrypt_cell(circuit_t **circ, cell_t *cell,
 
           circuit_t* split_expected_circ = next_subcirc->circ;
 
-          demo_register_cell(next_subcirc->id, CELL_DIRECTION_IN);
+          demo_register_cell(next_subcirc->id, CELL_DIRECTION_IN, true);
 
           if (*circ != split_expected_circ) {
             /* not expected, need to buffer */

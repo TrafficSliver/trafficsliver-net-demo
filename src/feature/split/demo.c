@@ -177,10 +177,10 @@ void demo_exit(void)
 #endif /* defined(ENABLE_DEMO_RPI) */
 }
 
-void demo_register_cell(subcirc_id_t subcirc, cell_direction_t direction)
+void demo_register_cell(subcirc_id_t subcirc, cell_direction_t direction, bool is_split_circuit)
 {
   struct demo_led_control *leds;
-  char *direction_str;
+  const char *direction_str;
 
   if (!demo_initialized)
     return;
@@ -204,6 +204,8 @@ void demo_register_cell(subcirc_id_t subcirc, cell_direction_t direction)
 #if defined(ENABLE_DEMO_RPI)
 
   struct gpiod_line *line = gpiod_line_bulk_get_line(&leds->lines, subcirc);
+  (void)direction_str;
+  (void)is_split_circuit;
 
   // turn on LED
   if (gpiod_line_set_value(line, 1) < 0) {
@@ -213,13 +215,16 @@ void demo_register_cell(subcirc_id_t subcirc, cell_direction_t direction)
 
 #elif defined(ENABLE_DEMO_SERVER)
 
-  log_notice(LD_DEMO, "%s %s relay cell on sub-circuit %u",
-             direction == CELL_DIRECTION_OUT ? "Merge" : "Split",
-             direction_str, subcirc);
+  if (is_split_circuit) {
+    log_notice(LD_DEMO, "%s %s relay cell on sub-circuit %u",
+               direction == CELL_DIRECTION_OUT ? "Merge" : "Split",
+               direction_str, subcirc);
+  }
 
 #elif defined(ENABLE_DEMO_TEST)
 
-  log_warn(LD_GENERAL, "LED%u, %s", subcirc, direction_str);
+  log_warn(LD_GENERAL, "LED%u, %s %s", subcirc, direction_str,
+           is_split_circuit ? "(split circuit)": "");
 
 #endif /* defined(ENABLE_DEMO_...) */
 
