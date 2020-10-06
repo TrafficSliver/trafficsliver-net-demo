@@ -907,10 +907,10 @@ split_process_joined(origin_circuit_t* circ, crypt_path_t* middle,
     tor_assert(length == 1 + id_length);
     received_id = subcirc_id_ntoh(read_subcirc_id(payload + 1));
 
+    demo_register_setup("JOINED received on sub-circuit %u", received_id);
+
     split_data_append_cpath(split_data, circ);
     split_data_subcirc_make_added(split_data, subcirc, received_id);
-
-    demo_register_setup("JOINED received on sub-circuit %u", received_id);
 
     /* consider attaching streams to the base circuit now */
     circuit_t* base_circ = split_data_get_base(split_data, 1);
