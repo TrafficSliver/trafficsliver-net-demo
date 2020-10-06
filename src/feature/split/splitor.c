@@ -13,6 +13,7 @@
 #include "core/or/cell_st.h"
 #include "core/or/or_circuit_st.h"
 #include "ext/ht.h"
+#include "feature/split/demo.h"
 #include "feature/split/splitcommon.h"
 #include "feature/split/splitdefines.h"
 #include "feature/split/splitutil.h"
@@ -93,6 +94,8 @@ split_send_cookie_response(or_circuit_t* circ, subcirc_id_t id,
            "payload: %s", success ? "success" : "error",
            circ, circ->p_circ_id, hex_str(payload, length));
 
+  demo_register_setup("COOKIE_SET sent on sub-circuit %u", id);
+
   retval = relay_send_command_from_edge(0, TO_CIRCUIT(circ),
                                         RELAY_COMMAND_SPLIT_COOKIE_SET,
                                         payload, length, NULL);
@@ -130,6 +133,8 @@ split_send_join_response(or_circuit_t* circ, subcirc_id_t id, int success)
   log_info(LD_CIRC, "Sending split JOINED %s cell to circ %p (ID %u); "
            "payload: %s", success  ? "success" : "inv-cookie",
            circ, circ->p_circ_id, hex_str(payload, length));
+
+  demo_register_setup("JOINED sent on sub-circuit %u", id);
 
   retval = relay_send_command_from_edge(0, TO_CIRCUIT(circ),
                                         RELAY_COMMAND_SPLIT_JOINED,
@@ -316,6 +321,8 @@ split_process_set_cookie(or_circuit_t* circ, size_t length,
     subcirc_id = circ->subcirc->id;
   }
 
+  demo_register_setup("SET_COOKIE received on sub-circuit %u", subcirc_id);
+
   /* store cookie in split_data */
   split_data_cookie_make_invalid(split_data);
   memcpy(split_data->cookie, payload, SPLIT_COOKIE_LEN);
@@ -375,6 +382,8 @@ split_process_join(or_circuit_t* circ, size_t length,
     subcirc_id = split_get_new_subcirc_id(split_data);
     circ->subcirc = split_data_add_subcirc(split_data, SUBCIRC_STATE_ADDED,
                                            TO_CIRCUIT(circ), subcirc_id);
+
+    demo_register_setup("JOIN received on sub-circuit %u", subcirc_id);
 
     tor_assert(split_data_check_subcirc(split_data, TO_CIRCUIT(circ)) == 0);
 
@@ -503,6 +512,10 @@ split_process_instruction(or_circuit_t* circ, size_t length,
   log_info(LD_CIRC, "Received %s cell on circuit %p (ID %u)",
            direction == CELL_DIRECTION_IN ? "INSTRUCTION": "INFO",
            circ, circ->p_circ_id);
+
+  demo_register_instruction("%s received on sub-circuit %u",
+      direction == CELL_DIRECTION_IN ? "INSTRUCTION": "INFO",
+      circ->subcirc->id);
 
   split_instruction_append(existing_instructions, received);
 

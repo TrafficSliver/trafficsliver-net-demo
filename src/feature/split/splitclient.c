@@ -19,6 +19,7 @@
 #include "core/or/cpath_build_state_st.h"
 #include "core/or/extend_info_st.h"
 #include "feature/nodelist/nodelist.h"
+#include "feature/split/demo.h"
 #include "feature/split/splitcommon.h"
 #include "feature/split/splitdefines.h"
 #include "feature/split/spliteval.h"
@@ -157,6 +158,8 @@ split_send_new_cookie(origin_circuit_t* circ, crypt_path_t* middle)
            "using cookie %s", circ, TO_CIRCUIT(circ)->n_circ_id,
            cpath_name(middle), hex_str(payload, SPLIT_COOKIE_LEN));
 
+  demo_register_setup("SET_COOKIE sent on sub-circuit %u", middle->subcirc->id);
+
   retval = relay_send_command_from_edge(0, TO_CIRCUIT(circ),
                                         RELAY_COMMAND_SPLIT_SET_COOKIE,
                                         payload, SPLIT_COOKIE_LEN, middle);
@@ -219,6 +222,8 @@ split_send_join_request(origin_circuit_t* circ, crypt_path_t* middle)
   log_info(LD_CIRC, "Sending new JOIN cell on circuit %p (ID %u) to %s "
              "using cookie %s", circ, TO_CIRCUIT(circ)->n_circ_id,
              cpath_name(middle), hex_str(payload, SPLIT_COOKIE_LEN));
+
+  demo_register_setup("JOIN sent");
 
   retval = relay_send_command_from_edge(0, TO_CIRCUIT(circ),
                                         RELAY_COMMAND_SPLIT_JOIN,
@@ -680,6 +685,8 @@ split_process_cookie_set(origin_circuit_t* circ, crypt_path_t* middle,
       tor_assert_unreached();
     }
 
+    demo_register_setup("COOKIE_SET received on sub-circuit %u", received_id);
+
     /* update cookie state */
     split_data->cookie_state = SPLIT_COOKIE_STATE_VALID;
 
@@ -903,6 +910,8 @@ split_process_joined(origin_circuit_t* circ, crypt_path_t* middle,
     split_data_append_cpath(split_data, circ);
     split_data_subcirc_make_added(split_data, subcirc, received_id);
 
+    demo_register_setup("JOINED received on sub-circuit %u", received_id);
+
     /* consider attaching streams to the base circuit now */
     circuit_t* base_circ = split_data_get_base(split_data, 1);
     if (split_may_attach_stream(TO_ORIGIN_CIRCUIT(base_circ), 1)) {
@@ -1054,6 +1063,9 @@ split_data_generate_instruction(split_data_t* split_data,
            "INFO", TO_ORIGIN_CIRCUIT(base), base->n_circ_id,
            cpath_name(cpath));
 
+  demo_register_instruction("%s sent on sub-circuit 0",
+      relay_command == RELAY_COMMAND_SPLIT_INSTRUCTION ? "INSTRUCTION" : "INFO");
+
   retval = relay_send_command_from_edge(0, base, relay_command,
                                          (char*)payload, payload_len, cpath);
 
@@ -1086,6 +1098,7 @@ split_data_finalise(split_data_t* split_data)
     return;
 
   log_info(LD_CIRC, "Make split_data %p final", split_data);
+  demo_register_setup("Multipath circuit setup finished (%u sub-circuits)", split_data_get_num_subcircs_added(split_data));
   split_data->split_data_client->use_previous_data_in = 0;
   split_data->split_data_client->use_previous_data_out = 0; //this is the beginning of the page load and therefore data distribution is enterely new
 
