@@ -1,0 +1,76 @@
+FROM debian:buster
+
+# Install tools
+RUN apt-get update && \
+    apt-get install -y build-essential gawk git texinfo bison file bc flex libssl-dev libncurses5-dev automake curl libtool pkg-config autoconf-archive rsync python3
+
+# Build cross-compile toolchain
+RUN mkdir /downloads
+WORKDIR /downloads
+
+RUN curl https://ftp.gnu.org/gnu/binutils/binutils-2.32.tar.bz2 -o binutils-2.32.tar.bz2 && \
+    curl https://ftp.gnu.org/gnu/libc/glibc-2.28.tar.bz2 -o glibc-2.28.tar.bz2 && \
+    curl https://ftp.gnu.org/gnu/gcc/gcc-8.3.0/gcc-8.3.0.tar.xz -o gcc-8.3.0.tar.gz && \
+    git clone --depth=1 https://github.com/raspberrypi/linux
+
+RUN tar xf binutils-2.32.tar.bz2 && \
+    tar xf glibc-2.28.tar.bz2 && \
+    tar xf gcc-8.3.0.tar.gz && \
+    rm *.tar.*
+
+WORKDIR /downloads/gcc-8.3.0
+RUN contrib/download_prerequisites && rm *.tar.*
+
+WORKDIR /downloads
+RUN mkdir -p /opt/rpi-xc
+
+WORKDIR /downloads/build-binutils
+RUN ../binutils-2.32/configure \
+        --prefix=/opt/rpi-xc --target=arm-linux-gnueabihf \
+        --with-arch=armv6 --with-fpu=vfp --with-float=hard \
+        --disable-multilib && \
+    make -j$(nproc) && make install
+
+WORKDIR /downloads/build-gcc
+RUN ../gcc-8.3.0/configure \
+        --prefix=/opt/rpi-xc \
+        --target=arm-linux-gnueabihf \
+        --enable-languages=c,c++,fortran \
+        --with-arch=armv6 --with-fpu=vfp --with-float=hard \
+        --disable-multilib \
+	--disable-libssp && \
+    make -j$(nproc) all-gcc && make install-gcc
+ENV PATH=/opt/rpi-xc/bin:${PATH}
+
+WORKDIR /downloads/linux
+ENV KERNEL=kernel7
+RUN make ARCH=arm INSTALL_HDR_PATH=/opt/rpi-xc/arm-linux-gnueabihf headers_install
+
+WORKDIR /downloads/build-glibc
+RUN ../glibc-2.28/configure \
+        --prefix=/opt/rpi-xc/arm-linux-gnueabihf \
+        --build=$MACHTYPE --host=arm-linux-gnueabihf --target=arm-linux-gnueabihf \
+        --with-arch=armv6 --with-fpu=vfp --with-float=hard \
+        --with-headers=/opt/rpi-xc/arm-linux-gnueabihf/include \
+        --disable-multilib libc_cv_forced_unwind=yes && \
+    make install-bootstrap-headers=yes install-headers && make -j8 csu/subdir_lib && \
+    install csu/crt1.o csu/crti.o csu/crtn.o /opt/rpi-xc/arm-linux-gnueabihf/lib && \
+    arm-linux-gnueabihf-gcc -nostdlib -nostartfiles -shared -x c /dev/null \
+        -o /opt/rpi-xc/arm-linux-gnueabihf/lib/libc.so && \
+    touch /opt/rpi-xc/arm-linux-gnueabihf/include/gnu/stubs.h
+
+WORKDIR /downloads/build-gcc
+RUN make -j$(nproc) all-target-libgcc && make install-target-libgcc
+
+WORKDIR /downloads/build-glibc
+RUN make -j$(nproc) && make install
+
+WORKDIR /downloads/build-gcc
+RUN make -j$(nproc) && make install
+
+# Fix limits.h configuration
+WORKDIR /downloads/gcc-8.3.0
+RUN cat gcc/limitx.h gcc/glimits.h gcc/limity.h > `dirname $(arm-linux-gnueabihf-gcc -print-libgcc-file-name)`/include-fixed/limits.h
+
+WORKDIR /
+CMD bash
