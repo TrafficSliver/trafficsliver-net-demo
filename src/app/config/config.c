@@ -735,6 +735,8 @@ static config_var_t option_vars_[] = {
   V(SplitSubcircuits, UINT, "3"),
   V(SplitStrategy, STRING, "ROUND_ROBIN"),
   V(DisableDemo, BOOL, "0"),
+  V(DemoBlinkDuration, UINT, "1000"),
+  V(DemoCellInterval, UINT, "1"),
   END_OF_CONFIG_VARS
 };
 

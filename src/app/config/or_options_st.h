@@ -1096,6 +1096,12 @@ struct or_options_t {
 
   /** Split demo: if true, the user wants to disable the demo */
   int DisableDemo;
+
+  /** Split demo: LED-on time during blinking in usec (default: 1000) */
+  int DemoBlinkDuration;
+
+  /** Split demo: blink only for every n-th cell per sub-circuit (default: 1) */
+  int DemoCellInterval;
 };
 
 #endif
