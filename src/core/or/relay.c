@@ -1033,6 +1033,10 @@ connection_ap_process_end_not_open(
   /* This end cell is now valid. */
   circuit_read_valid_data(circ, rh->length);
 
+  if (circ->initiated_by_user) {
+    demo_register_setup("TCP stream closed/aborted");
+  }
+
   if (rh->length == 0) {
     reason = END_STREAM_REASON_MISC;
   }
@@ -1674,6 +1678,11 @@ connection_edge_process_relay_cell_not_open(
           break;
       }
     }
+
+    if (TO_ORIGIN_CIRCUIT(circ)->initiated_by_user) {
+      demo_register_setup("TCP stream connected");
+    }
+
     /* This is definitely a success, so forget about any pending data we
      * had sent. */
     if (entry_conn->pending_optimistic_data) {
@@ -1917,6 +1926,11 @@ connection_edge_process_relay_cell(cell_t *cell, circuit_t *circ,
                conn->base_.s,
                stream_end_reason_to_string(reason),
                conn->stream_id);
+
+      if (CIRCUIT_IS_ORIGIN(circ) && TO_ORIGIN_CIRCUIT(circ)->initiated_by_user) {
+        demo_register_setup("TCP stream closed/aborted");
+      }
+
       if (conn->base_.type == CONN_TYPE_AP) {
         entry_connection_t *entry_conn = EDGE_TO_ENTRY_CONN(conn);
         if (entry_conn->socks_request &&
