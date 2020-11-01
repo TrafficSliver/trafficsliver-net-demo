@@ -1,0 +1,60 @@
+
+Traffic Splitting Demo
+======================
+
+This file contains information on building and setting up the demo version of the traffic
+splitting-equipped Tor software.
+
+(For information on the traffic splitting extension to Tor or on the Tor software in
+ general, please refer to the "README_split" and "README" files in this directory.)
+
+
+--- 1) Demo code
+
+The source code for the demo functionality resides in the src/feature/split/demo[.c|.h]
+files within the newly added 'split' module (cf. README_split).
+
+
+
+--- 2) Building Tor with demo functionality
+
+To enable the demo functionality while building the Tor software, proceed according to
+the directions given in "README_split" and "README", but pass the additional
+"--enable-demo=<mode>" parameter to the ./configure script. Thereby, replace <mode>
+with one of the following options:
+
+  * rpi       build the Tor demo for running on Raspberry Pis (RPis) equipped with
+              colourful LEDs connected to the GPIO pins (cf. 3)) (cross-compilation may
+              be required for building on non-ARM platforms)
+
+  * server    build the Tor demo for running classical deployed Tor ORs (demo output will
+              be visuallised via shell/log output instead of colourful LEDs)
+
+  * test      build the Tor demo for testing purposes (emulates the 'rpi' mode on non-RPi
+              devices using shell/log output) (more verbose than 'server' mode)
+
+
+
+--- 3) Compile-time configuration of the demo
+
+The demo is mainly controlled via pre-processor macros within src/feature/split/demo.c.
+There, the number of sub-circuits per demo split circuit or the used RPi GPIO lines can
+be configured.
+
+
+
+--- 4) Run-time configuration of the demo
+
+Next to the compile-time configuration, some aspects of the demo functionality can be
+configured at run-time by inserting appropriate options into the torrc configuration
+file.
+
+The currently supported torrc-options are:
+
+  * DisableDemo          provide this option to disable all demo functionality
+
+  * DemoBlinkDuration    set the on-time of the LEDs for each processed cell to the given
+                         amount of microseconds (usec) in the 'rpi' or 'test' mode
+                         (default: 1000)
+
+  * DemoCellInterval     only visualise every n-th cell in the demo output (default: 1)
